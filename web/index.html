@@ -1,0 +1,161 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';">
+  <link rel="stylesheet" href="vendor/xterm/xterm.css">
+  <style>
+    html,
+    body,
+    #terminal-frame {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #0c0c0c;
+    }
+
+    #terminal-frame {
+      padding: 4px 8px;
+      box-sizing: border-box;
+    }
+
+    #terminal {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0c0c0c;
+    }
+
+    .xterm {
+      width: 100%;
+      height: 100%;
+    }
+
+    .xterm-viewport::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .xterm-viewport::-webkit-scrollbar-track {
+      background: #0c0c0c;
+    }
+
+    .xterm-viewport::-webkit-scrollbar-thumb {
+      background: rgba(185, 185, 185, 0.55);
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div id="terminal-frame">
+    <div id="terminal"></div>
+  </div>
+  <script src="vendor/xterm/xterm.js"></script>
+  <script src="vendor/fit/addon-fit.js"></script>
+  <script>
+    const fitAddon = new FitAddon.FitAddon();
+    const term = new Terminal({
+      allowProposedApi: false,
+      convertEol: false,
+      cursorBlink: true,
+      cursorStyle: 'block',
+      fontFamily: 'Cascadia Mono, Consolas, "Microsoft YaHei UI", monospace',
+      fontSize: 14,
+      lineHeight: 1.0,
+      scrollback: 3000,
+      theme: {
+        background: '#0c0c0c',
+        foreground: '#f2f2f2',
+        cursor: '#e6e6e6',
+        selectionBackground: '#264f78'
+      },
+      windowsMode: true
+    });
+
+    term.loadAddon(fitAddon);
+    term.open(document.getElementById('terminal'));
+    let fitQueued = false;
+    const fit = () => {
+      fitAddon.fit();
+      return { cols: term.cols, rows: term.rows };
+    };
+    const stableFit = () => new Promise(resolve => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          resolve(fit());
+        });
+      });
+    });
+    const queueFit = () => {
+      if (fitQueued) {
+        return;
+      }
+
+      fitQueued = true;
+      requestAnimationFrame(() => {
+        fitQueued = false;
+        const size = fit();
+        post({ type: 'resize', cols: size.cols, rows: size.rows });
+      });
+    };
+
+    fit();
+    term.focus();
+
+    const post = (message) => {
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage(message);
+      }
+    };
+
+    term.onData(data => post({ type: 'input', data }));
+    term.onResize(size => post({ type: 'resize', cols: size.cols, rows: size.rows }));
+
+    const requestHostPaste = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      post({ type: 'paste' });
+    };
+
+    window.addEventListener('paste', requestHostPaste, true);
+    document.addEventListener('paste', requestHostPaste, true);
+    window.addEventListener('keydown', event => {
+      if (event.ctrlKey && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'v') {
+        requestHostPaste(event);
+      }
+    }, true);
+
+    window.zmd = {
+      write(data) {
+        term.write(data);
+      },
+      clear() {
+        term.clear();
+      },
+      focus() {
+        term.focus();
+      },
+      async fit() {
+        return await stableFit();
+      },
+      async applySettings(settings) {
+        term.options.fontFamily = settings.fontFamily;
+        term.options.fontSize = settings.fontSize;
+        return await stableFit();
+      },
+      setBrightness(value) {
+        const normalized = Math.max(15, Math.min(100, value)) / 100;
+        document.getElementById('terminal').style.filter = `brightness(${normalized})`;
+      },
+      size() {
+        return { cols: term.cols, rows: term.rows };
+      }
+    };
+
+    window.addEventListener('resize', queueFit);
+    new ResizeObserver(queueFit).observe(document.getElementById('terminal'));
+
+    post({ type: 'ready', cols: term.cols, rows: term.rows });
+  </script>
+</body>
+</html>

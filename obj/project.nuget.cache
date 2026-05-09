@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "326IDdWh+1Zi1ERGbI6LUw0Msqwk5DiLeyGMHi+JDDiSJeF0h/nPhdSvMnbwmvAT1Eapv2lbpBUotm1prSXLvA==",
+  "success": true,
+  "projectFilePath": "D:\\project\\myproject\\term\\src\\zmd\\zmd.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\34368\\.nuget\\packages\\microsoft.web.webview2\\1.0.2903.40\\microsoft.web.webview2.1.0.2903.40.nupkg.sha512"
+  ],
+  "logs": []
+}
