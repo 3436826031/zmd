@@ -15,11 +15,21 @@
 - 窗口置顶
 - 简洁模式
 - 快捷打开ai终端
+![](src/zmd/image/image.png)
 - 防偷窥，支持调整终端显示亮度
+- 可通过win+r输入zmd直接打开
+
+![](src/zmd/image/image0.png)
 
 ## 运行
 
-下载exe文件，双击运行即可
+下载exe文件，双击运行即可哦
 
 
+
+
+
+![](src/zmd/image/imag1.png)
+
+![](src/zmd/image/image2.png)
 
