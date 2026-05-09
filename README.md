@@ -1,3 +1,17 @@
+<div align="center">
+  <img src="icon.png" width="96" alt="zmd" />
+  <h1>&#9889; zmd</h1>
+  <p>&#128421;&#65039; Windows &nbsp; | &nbsp; &#128640; Lightweight &nbsp; | &nbsp; &#129513; Multi Session &nbsp; | &nbsp; &#129302; AI Terminal</p>
+
+  <p>
+    <a href="https://github.com/3436826031/zmd"><img src="https://img.shields.io/badge/GitHub-zmd-181717?style=for-the-badge&logo=github" alt="GitHub" /></a>
+    <a href="https://gitee.com/xwasdqwe/zmd"><img src="https://img.shields.io/badge/Gitee-zmd-C71D23?style=for-the-badge&logo=gitee" alt="Gitee" /></a>
+    <img src="https://img.shields.io/badge/.NET-7.0-512BD4?style=for-the-badge&logo=dotnet" alt=".NET 7" />
+    <img src="https://img.shields.io/badge/Platform-Windows-0078D4?style=for-the-badge&logo=windows" alt="Windows" />
+  </p>
+</div>
+
+---
 # zmd
 
 轻量 Windows 第三方终端壳，目标是接近原生 `cmd` 的启动速度和简单度，同时改进字体、窗口布局和多会话体验。
@@ -26,4 +40,12 @@
 ## 运行
 
 下载exe文件，双击运行即可哦
+---
 
+<div align="center">
+  <h2>&#128247; Preview</h2>
+  <p>
+    <img src="image/imag1.png" width="48%" alt="preview" />
+    <img src="image/image2.png" width="48%" alt="preview" />
+  </p>
+</div>
