@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Reflection;
 
 namespace Zmd;
@@ -13,7 +14,7 @@ internal sealed class AboutDialog : Form
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = false;
         MinimizeBox = false;
-        ClientSize = new Size(420, 250);
+        ClientSize = new Size(500, 310);
         BackColor = Color.FromArgb(24, 24, 24);
         ForeColor = Color.White;
         Font = new Font("Segoe UI", 9.0f, FontStyle.Regular, GraphicsUnit.Point);
@@ -24,22 +25,24 @@ internal sealed class AboutDialog : Form
             Text = "zmd",
             Left = 20,
             Top = 18,
-            Width = 360,
+            Width = 440,
             Height = 38,
             Font = new Font("Segoe UI", 18.0f, FontStyle.Bold, GraphicsUnit.Point),
             ForeColor = Color.White,
             TextAlign = ContentAlignment.MiddleLeft
         };
 
-        var versionLabel = CreateLabel($"版本：{VersionText()}", 22, 66, 360);
-        var authorLabel = CreateLabel("作者：34368", 22, 96, 360);
-        var userLabel = CreateLabel($"当前用户：{Environment.UserName}", 22, 126, 360);
-        var runtimeLabel = CreateLabel($".NET：{Environment.Version}", 22, 156, 360);
-        var descriptionLabel = CreateLabel("轻量 Windows 终端，面向多会话、分屏和 AI 终端工作流。", 22, 186, 360);
+        var versionLabel = CreateLabel($"版本：{VersionText()}", 22, 66, 440);
+        var authorLabel = CreateLabel("个人作者：落云", 22, 96, 440);
+        var githubLink = CreateLink("GitHub: https://github.com/3436826031/zmd", "https://github.com/3436826031/zmd", 22, 126, 440);
+        var giteeLink = CreateLink("Gitee: https://gitee.com/xwasdqwe/zmd", "https://gitee.com/xwasdqwe/zmd", 22, 156, 440);
+        var userLabel = CreateLabel($"当前用户：{Environment.UserName}", 22, 186, 440);
+        var runtimeLabel = CreateLabel($".NET：{Environment.Version}", 22, 216, 440);
+        var descriptionLabel = CreateLabel("轻量 Windows 终端，面向多会话、分屏和 AI 终端工作流。", 22, 246, 440);
 
         okButton.Text = "确定";
-        okButton.Left = 326;
-        okButton.Top = 210;
+        okButton.Left = 406;
+        okButton.Top = 270;
         okButton.Width = 74;
         okButton.Height = 28;
         okButton.DialogResult = DialogResult.OK;
@@ -51,6 +54,8 @@ internal sealed class AboutDialog : Form
         Controls.Add(titleLabel);
         Controls.Add(versionLabel);
         Controls.Add(authorLabel);
+        Controls.Add(githubLink);
+        Controls.Add(giteeLink);
         Controls.Add(userLabel);
         Controls.Add(runtimeLabel);
         Controls.Add(descriptionLabel);
@@ -80,6 +85,40 @@ internal sealed class AboutDialog : Form
             ForeColor = Color.FromArgb(220, 224, 230),
             TextAlign = ContentAlignment.MiddleLeft
         };
+    }
+
+    private static LinkLabel CreateLink(string text, string url, int left, int top, int width)
+    {
+        var link = new LinkLabel
+        {
+            Text = text,
+            Left = left,
+            Top = top,
+            Width = width,
+            Height = 24,
+            LinkColor = Color.FromArgb(88, 166, 255),
+            ActiveLinkColor = Color.FromArgb(140, 190, 255),
+            VisitedLinkColor = Color.FromArgb(88, 166, 255),
+            BackColor = Color.Transparent,
+            TextAlign = ContentAlignment.MiddleLeft
+        };
+        var start = text.IndexOf("https://", StringComparison.Ordinal);
+        if (start >= 0)
+        {
+            link.Links.Add(start, url.Length, url);
+        }
+
+        link.LinkClicked += (_, e) =>
+        {
+            if (e.Link?.LinkData is string target)
+            {
+                Process.Start(new ProcessStartInfo(target)
+                {
+                    UseShellExecute = true
+                });
+            }
+        };
+        return link;
     }
 
     private static void ConfigureButton(Button button)
