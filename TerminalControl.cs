@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
@@ -296,6 +297,12 @@ internal sealed class TerminalControl : UserControl
             return;
         }
 
+        if (type == "copy" && root.TryGetProperty("data", out var copyProperty))
+        {
+            CopyTextToClipboard(copyProperty.GetString());
+            return;
+        }
+
         if (type is "resize" or "ready")
         {
             UpdateSize(root);
@@ -316,6 +323,22 @@ internal sealed class TerminalControl : UserControl
         }
 
         InputReceived?.Invoke(this, text.Replace("\r\n", "\r").Replace("\n", "\r"));
+    }
+
+    private static void CopyTextToClipboard(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
+        try
+        {
+            Clipboard.SetText(text, TextDataFormat.UnicodeText);
+        }
+        catch (ExternalException)
+        {
+        }
     }
 
     private async Task WriteAsync(string text)

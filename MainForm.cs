@@ -365,6 +365,7 @@ internal sealed class MainForm : Form
     {
         var menu = CreateDarkMenu();
         menu.Items.Add(CreateMenuItem("清除终端内容", "close", (_, _) => ClearActiveSession()));
+        menu.Items.Add("跳转路径", null, (_, _) => ShowJumpPathDialog());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(CreateMenuItem("cmd", "cmd", (_, _) => CreateCmdSession()));
         menu.Items.Add("PowerShell", null, (_, _) => CreateSession("powershell.exe"));
@@ -372,6 +373,74 @@ internal sealed class MainForm : Form
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(CreateBrightnessMenuItem());
         ShowMenu(menu, menuButton);
+    }
+
+    private void ShowJumpPathDialog()
+    {
+        if (activeSession is null)
+        {
+            return;
+        }
+
+        using var dialog = new Form
+        {
+            Text = "跳转路径",
+            StartPosition = FormStartPosition.CenterParent,
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            MaximizeBox = false,
+            MinimizeBox = false,
+            ShowInTaskbar = false,
+            BackColor = Color.FromArgb(24, 26, 30),
+            ForeColor = UiTheme.Text,
+            ClientSize = new Size(420, 116),
+            Font = Font
+        };
+        var input = new TextBox
+        {
+            Left = 16,
+            Top = 18,
+            Width = 388,
+            Text = settings.WorkingDirectory,
+            BackColor = Color.FromArgb(34, 34, 34),
+            ForeColor = Color.White,
+            BorderStyle = BorderStyle.FixedSingle
+        };
+        var okButton = new Button
+        {
+            Text = "跳转",
+            DialogResult = DialogResult.OK,
+            Left = 250,
+            Top = 66,
+            Width = 72,
+            Height = 28
+        };
+        var cancelButton = new Button
+        {
+            Text = "取消",
+            DialogResult = DialogResult.Cancel,
+            Left = 332,
+            Top = 66,
+            Width = 72,
+            Height = 28
+        };
+        dialog.Controls.Add(input);
+        dialog.Controls.Add(okButton);
+        dialog.Controls.Add(cancelButton);
+        dialog.AcceptButton = okButton;
+        dialog.CancelButton = cancelButton;
+
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+        {
+            return;
+        }
+
+        var path = input.Text.Trim();
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        activeSession.Write($"cd /d \"{path.Replace("\"", "\"\"")}\"\r");
     }
 
     private void ShowNewTerminalMenu(Control owner, Point location)
@@ -1201,24 +1270,7 @@ internal sealed class MainForm : Form
 
     private void ConfigureToolTip()
     {
-        toolTip.OwnerDraw = true;
-        toolTip.BackColor = Color.Black;
-        toolTip.ForeColor = Color.White;
-        toolTip.InitialDelay = 450;
-        toolTip.ReshowDelay = 100;
-        toolTip.AutoPopDelay = 5000;
-        toolTip.Draw += (_, e) =>
-        {
-            using var backgroundBrush = new SolidBrush(Color.Black);
-            e.Graphics.FillRectangle(backgroundBrush, e.Bounds);
-            TextRenderer.DrawText(
-                e.Graphics,
-                e.ToolTipText,
-                Font,
-                e.Bounds,
-                Color.White,
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
-        };
+        DarkToolTip.Configure(toolTip, () => Font);
     }
 
     private void SetActionToolTips()

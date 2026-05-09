@@ -235,31 +235,15 @@ internal sealed class SessionTab : UserControl
 
     private void ConfigureToolTip()
     {
-        toolTip.OwnerDraw = true;
-        toolTip.BackColor = Color.Black;
-        toolTip.ForeColor = Color.White;
-        toolTip.InitialDelay = 450;
-        toolTip.ReshowDelay = 100;
-        toolTip.AutoPopDelay = 5000;
-        toolTip.Draw += (_, e) =>
-        {
-            using var backgroundBrush = new SolidBrush(Color.Black);
-            e.Graphics.FillRectangle(backgroundBrush, e.Bounds);
-            TextRenderer.DrawText(
-                e.Graphics,
-                e.ToolTipText,
-                Font,
-                e.Bounds,
-                Color.White,
-                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
-        };
+        DarkToolTip.Configure(toolTip, () => Font);
     }
 
     private void UpdateToolTip()
     {
-        toolTip.SetToolTip(this, Session.Title);
-        toolTip.SetToolTip(iconView, Session.Title);
-        toolTip.SetToolTip(titleLabel, Session.Title);
+        var switchText = $"切换到终端：{Session.Title}";
+        toolTip.SetToolTip(this, switchText);
+        toolTip.SetToolTip(iconView, switchText);
+        toolTip.SetToolTip(titleLabel, switchText);
         toolTip.SetToolTip(closeButton, "关闭终端");
     }
 

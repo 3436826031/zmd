@@ -117,11 +117,31 @@
       post({ type: 'paste' });
     };
 
+    const selectedText = () => term.hasSelection() ? term.getSelection() : '';
+    const requestHostCopy = (event) => {
+      const text = selectedText();
+      if (!text) {
+        return false;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      post({ type: 'copy', data: text });
+      return true;
+    };
+
     window.addEventListener('paste', requestHostPaste, true);
     document.addEventListener('paste', requestHostPaste, true);
+    window.addEventListener('copy', requestHostCopy, true);
+    document.addEventListener('copy', requestHostCopy, true);
     window.addEventListener('keydown', event => {
       if (event.ctrlKey && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'v') {
         requestHostPaste(event);
+        return;
+      }
+
+      if (event.ctrlKey && !event.altKey && event.key.toLowerCase() === 'c') {
+        requestHostCopy(event);
       }
     }, true);
 
