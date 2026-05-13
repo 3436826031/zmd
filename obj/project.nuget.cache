@@ -1,10 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "326IDdWh+1Zi1ERGbI6LUw0Msqwk5DiLeyGMHi+JDDiSJeF0h/nPhdSvMnbwmvAT1Eapv2lbpBUotm1prSXLvA==",
+  "dgSpecHash": "0VySo40rYu2JqEU0x1riSvBjkrpQl20e+KTdh4OCDfH+aoc1xZlq0oZIQsycxh2BPc0cGg0IDavXMoCBAFCa5w==",
   "success": true,
   "projectFilePath": "D:\\project\\myproject\\term\\src\\zmd\\zmd.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\34368\\.nuget\\packages\\microsoft.web.webview2\\1.0.2903.40\\microsoft.web.webview2.1.0.2903.40.nupkg.sha512"
+    "C:\\Users\\34368\\.nuget\\packages\\microsoft.web.webview2\\1.0.2903.40\\microsoft.web.webview2.1.0.2903.40.nupkg.sha512",
+    "C:\\Users\\34368\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\7.0.14\\microsoft.netcore.app.runtime.win-x64.7.0.14.nupkg.sha512",
+    "C:\\Users\\34368\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\7.0.14\\microsoft.windowsdesktop.app.runtime.win-x64.7.0.14.nupkg.sha512",
+    "C:\\Users\\34368\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\7.0.14\\microsoft.aspnetcore.app.runtime.win-x64.7.0.14.nupkg.sha512"
   ],
   "logs": []
 }

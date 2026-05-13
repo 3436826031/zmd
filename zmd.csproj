@@ -11,13 +11,15 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>false</SelfContained>
+    <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Remove="installer\**\*.cs" />
+    <Compile Remove="obj\**\*.cs" />
+    <Compile Remove="obj-self-contained\**\*.cs" />
   </ItemGroup>
 
   <ItemGroup>

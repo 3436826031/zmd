@@ -1,6 +1,4 @@
 using System.Diagnostics;
-using System.Reflection;
-
 namespace Zmd;
 
 internal sealed class AboutDialog : Form
@@ -32,7 +30,7 @@ internal sealed class AboutDialog : Form
             TextAlign = ContentAlignment.MiddleLeft
         };
 
-        var versionLabel = CreateLabel($"版本：{VersionText()}", 22, 66, 440);
+        var versionLabel = CreateLabel($"当前版本：{AppInfo.Version}", 22, 66, 440);
         var authorLabel = CreateLabel("个人作者：落云", 22, 96, 440);
         var githubLink = CreateLink("GitHub: https://github.com/3436826031/zmd", "https://github.com/3436826031/zmd", 22, 126, 440);
         var giteeLink = CreateLink("Gitee: https://gitee.com/xwasdqwe/zmd", "https://gitee.com/xwasdqwe/zmd", 22, 156, 440);
@@ -60,17 +58,6 @@ internal sealed class AboutDialog : Form
         Controls.Add(runtimeLabel);
         Controls.Add(descriptionLabel);
         Controls.Add(okButton);
-    }
-
-    private static string VersionText()
-    {
-        var version = Assembly.GetExecutingAssembly().GetName().Version;
-        if (version is null)
-        {
-            return "未知";
-        }
-
-        return $"{version.Major}.{version.Minor}.{version.Build}";
     }
 
     private static Label CreateLabel(string text, int left, int top, int width)

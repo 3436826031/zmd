@@ -354,6 +354,14 @@ internal sealed class RoundedButton : Control
                 graphics.DrawLine(pen, cx - 2, cy - 1, cx - 6, cy - 5);
                 graphics.DrawLine(pen, cx + 2, cy - 1, cx + 6, cy + 3);
                 break;
+            case ButtonGlyph.JumpPath:
+                graphics.DrawLine(pen, cx - 7, cy - 4, cx - 2, cy - 4);
+                graphics.DrawLine(pen, cx - 2, cy - 4, cx, cy - 1);
+                graphics.DrawRectangle(pen, cx - 7, cy - 2, 14, 9);
+                graphics.DrawLine(pen, cx - 3, cy + 2, cx + 3, cy + 2);
+                graphics.DrawLine(pen, cx + 1, cy, cx + 3, cy + 2);
+                graphics.DrawLine(pen, cx + 1, cy + 4, cx + 3, cy + 2);
+                break;
         }
     }
 }
@@ -370,5 +378,6 @@ internal enum ButtonGlyph
     CollapseLeft,
     ExpandLeft,
     ExpandRight,
-    CompactMode
+    CompactMode,
+    JumpPath
 }

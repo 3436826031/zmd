@@ -39,6 +39,7 @@ internal sealed class TerminalControl : UserControl
         webView.WebMessageReceived += HandleWebMessage;
         webView.DragEnter += HandleDragEnter;
         webView.DragDrop += HandleDragDrop;
+        webView.MouseDown += (_, _) => ActivateTerminal();
         Resize += (_, _) => QueueFit();
         VisibleChanged += (_, _) => QueueFit();
         _ = InitializeAsync();

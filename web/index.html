@@ -99,8 +99,21 @@
       });
     };
 
+    const refocusInput = () => {
+      term.focus();
+      const helper = document.querySelector('.xterm-helper-textarea');
+      if (helper) {
+        helper.focus();
+      }
+    };
+    const stabilizeImeFocus = () => {
+      refocusInput();
+      setTimeout(refocusInput, 30);
+      setTimeout(refocusInput, 120);
+    };
+
     fit();
-    term.focus();
+    stabilizeImeFocus();
 
     const post = (message) => {
       if (window.chrome && window.chrome.webview) {
@@ -153,7 +166,7 @@
         term.clear();
       },
       focus() {
-        term.focus();
+        stabilizeImeFocus();
       },
       async fit() {
         return await stableFit();
@@ -173,6 +186,13 @@
     };
 
     window.addEventListener('resize', queueFit);
+    window.addEventListener('focus', stabilizeImeFocus);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        stabilizeImeFocus();
+      }
+    });
+    document.getElementById('terminal-frame').addEventListener('mousedown', stabilizeImeFocus);
     new ResizeObserver(queueFit).observe(document.getElementById('terminal'));
 
     post({ type: 'ready', cols: term.cols, rows: term.rows });

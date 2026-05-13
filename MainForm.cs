@@ -34,6 +34,7 @@ internal sealed class MainForm : Form
     private readonly Panel sideBar = new();
     private readonly ToolTip toolTip = new();
     private readonly FlowLayoutPanel floatingActions = new();
+    private readonly RoundedButton jumpPathButton = new();
     private readonly RoundedButton compactModeButton = new();
     private readonly RoundedButton floatingPinButton = new();
     private readonly FlowLayoutPanel topActions = new();
@@ -97,7 +98,7 @@ internal sealed class MainForm : Form
         sideBarSplitter.BackColor = Color.FromArgb(24, 26, 30);
         sideBarSplitter.Cursor = Cursors.SizeWE;
 
-        floatingActions.Size = new Size(68, 34);
+        floatingActions.Size = new Size(100, 34);
         floatingActions.Anchor = AnchorStyles.Right | AnchorStyles.Bottom;
         floatingActions.FlowDirection = FlowDirection.LeftToRight;
         floatingActions.WrapContents = false;
@@ -127,6 +128,7 @@ internal sealed class MainForm : Form
         pinButton.Glyph = ButtonGlyph.Pin;
         settingsButton.Glyph = ButtonGlyph.Settings;
         settingsButton.ImageKey = "settings-image";
+        ConfigureFloatingActionButton(jumpPathButton, ButtonGlyph.JumpPath);
         ConfigureFloatingActionButton(compactModeButton, ButtonGlyph.CompactMode);
         ConfigureFloatingActionButton(floatingPinButton, ButtonGlyph.Pin);
         SetActionToolTips();
@@ -135,6 +137,7 @@ internal sealed class MainForm : Form
         topActions.Controls.Add(menuButton);
         topActions.Controls.Add(pinButton);
         topActions.Controls.Add(settingsButton);
+        floatingActions.Controls.Add(jumpPathButton);
         floatingActions.Controls.Add(compactModeButton);
         floatingActions.Controls.Add(floatingPinButton);
 
@@ -148,19 +151,29 @@ internal sealed class MainForm : Form
         floatingActions.BringToFront();
         PositionFloatingActions();
         ApplySideBarDock();
+        UpdateTerminalHostPadding();
 
         sideBarToggleButton.Click += (_, _) => ToggleSideBar();
         newButton.Click += (_, _) => ShowNewTerminalMenu(newButton, new Point(0, newButton.Height));
         menuButton.Click += (_, _) => ShowShellMenu();
         pinButton.Click += (_, _) => ToggleTopMost();
         floatingPinButton.Click += (_, _) => ToggleTopMost();
+        jumpPathButton.Click += (_, _) => ShowJumpPathDialog();
         compactModeButton.Click += (_, _) => ApplyCompactMode();
         settingsButton.Click += (_, _) => ShowSettingsMenu();
+        Activated += (_, _) =>
+        {
+            if (activeSession is not null && controls.TryGetValue(activeSession, out var terminal))
+            {
+                terminal.ActivateTerminal();
+            }
+        };
         Resize += (_, _) =>
         {
             PositionFloatingActions();
             QueueVisibleTerminalFits();
         };
+        Shown += (_, _) => EnsureWinRLaunchPath();
         Shown += (_, _) => CreateSession();
         Shown += (_, _) => ApplySplitMinSizes();
         FormClosing += (_, _) =>
@@ -180,6 +193,9 @@ internal sealed class MainForm : Form
             {
                 expandedSideBarWidth = Math.Max(140, sideBar.Width);
             }
+
+            UpdateTerminalHostPadding();
+            QueueVisibleTerminalFits();
         };
 
         terminalHost.DragEnter += HandleSessionDragEnter;
@@ -366,6 +382,8 @@ internal sealed class MainForm : Form
         var menu = CreateDarkMenu();
         menu.Items.Add(CreateMenuItem("清除终端内容", "close", (_, _) => ClearActiveSession()));
         menu.Items.Add("跳转路径", null, (_, _) => ShowJumpPathDialog());
+        var cancelSplitItem = menu.Items.Add("取消分屏", null, (_, _) => CancelSplitLayout());
+        cancelSplitItem.Enabled = panes.Values.Any(pane => pane == TerminalPane.Right);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(CreateMenuItem("cmd", "cmd", (_, _) => CreateCmdSession()));
         menu.Items.Add("PowerShell", null, (_, _) => CreateSession("powershell.exe"));
@@ -507,6 +525,7 @@ internal sealed class MainForm : Form
         menu.Items.Add(CreateSideBarDockMenu());
         menu.Items.Add("一键设置 Win+R 打开 zmd", null, (_, _) => AddCurrentDirectoryToUserPath());
         menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add("检查更新", null, (_, _) => OpenReleasesPage());
         menu.Items.Add("关于 zmd", null, (_, _) => ShowAboutDialog());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add($"Current: {settings.FontFamily} {settings.FontSize:0.#}pt").Enabled = false;
@@ -605,6 +624,14 @@ internal sealed class MainForm : Form
         dialog.ShowDialog(this);
     }
 
+    private static void OpenReleasesPage()
+    {
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(AppInfo.ReleasesUrl)
+        {
+            UseShellExecute = true
+        });
+    }
+
     private void AddCurrentDirectoryToUserPath()
     {
         var executableDirectory = Path.GetDirectoryName(Application.ExecutablePath);
@@ -614,34 +641,15 @@ internal sealed class MainForm : Form
             return;
         }
 
-        executableDirectory = NormalizePathEntry(executableDirectory);
-        var userPath = Environment.GetEnvironmentVariable("Path", EnvironmentVariableTarget.User) ?? string.Empty;
-        var entries = SplitPathEntries(userPath).ToList();
-        if (entries.Any(entry => PathsEqual(entry, executableDirectory)))
-        {
-            MessageBox.Show(this, "当前 zmd.exe 所在目录已经在用户 PATH 中。", "zmd", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
-        }
-
-        var confirm = MessageBox.Show(
-            this,
-            $"将把下面的目录加入用户 PATH：\n\n{executableDirectory}\n\n之后可通过 Win+R 输入 zmd 打开。是否继续？",
-            "一键设置 zmd",
-            MessageBoxButtons.YesNo,
-            MessageBoxIcon.Question);
-        if (confirm != DialogResult.Yes)
-        {
-            return;
-        }
-
         try
         {
-            entries.Add(executableDirectory);
-            var nextUserPath = string.Join(";", entries);
-            Environment.SetEnvironmentVariable("Path", nextUserPath, EnvironmentVariableTarget.User);
-            Environment.SetEnvironmentVariable("Path", MergeProcessPath(Environment.GetEnvironmentVariable("Path"), executableDirectory), EnvironmentVariableTarget.Process);
-            BroadcastEnvironmentChanged();
-            MessageBox.Show(this, "已加入用户 PATH。重新打开 Win+R 或终端后即可输入 zmd 启动。", "zmd", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            var added = PathRegistration.AddDirectoryToUserPath(executableDirectory);
+            MessageBox.Show(
+                this,
+                added ? "已加入用户 PATH。重新打开 Win+R 或终端后即可输入 zmd 启动。" : "当前 zmd.exe 所在目录已经在用户 PATH 中。",
+                "zmd",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
@@ -649,44 +657,20 @@ internal sealed class MainForm : Form
         }
     }
 
-    private static IEnumerable<string> SplitPathEntries(string value)
+    private void EnsureWinRLaunchPath()
     {
-        return value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(entry => !string.IsNullOrWhiteSpace(entry));
-    }
-
-    private static string MergeProcessPath(string? currentPath, string newEntry)
-    {
-        var entries = SplitPathEntries(currentPath ?? string.Empty).ToList();
-        if (!entries.Any(entry => PathsEqual(entry, newEntry)))
+        try
         {
-            entries.Add(newEntry);
+            var executableDirectory = Path.GetDirectoryName(Application.ExecutablePath);
+            if (!string.IsNullOrWhiteSpace(executableDirectory))
+            {
+                PathRegistration.AddDirectoryToUserPath(executableDirectory);
+            }
         }
-
-        return string.Join(";", entries);
-    }
-
-    private static bool PathsEqual(string left, string right)
-    {
-        return string.Equals(NormalizePathEntry(left), NormalizePathEntry(right), StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string NormalizePathEntry(string path)
-    {
-        var expanded = Environment.ExpandEnvironmentVariables(path.Trim().Trim('"'));
-        return Path.GetFullPath(expanded).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-    }
-
-    private static void BroadcastEnvironmentChanged()
-    {
-        NativeMethods.SendMessageTimeout(
-            NativeMethods.HWND_BROADCAST,
-            NativeMethods.WM_SETTINGCHANGE,
-            0,
-            "Environment",
-            NativeMethods.SMTO_ABORTIFHUNG,
-            5000,
-            out _);
+        catch
+        {
+            // PATH registration is a convenience feature and should not block startup.
+        }
     }
 
     private void ToggleTopMost()
@@ -943,6 +927,8 @@ internal sealed class MainForm : Form
         sideBarSplitter.BringToFront();
         floatingActions.BringToFront();
         PositionFloatingActions();
+        UpdateTerminalHostPadding();
+        QueueVisibleTerminalFits();
     }
 
     private bool IsSideBarLeft()
@@ -983,6 +969,8 @@ internal sealed class MainForm : Form
         SetTabsCompact(true);
         sideBarToggleButton.Glyph = SideBarToggleGlyph();
         SetActionToolTips();
+        UpdateTerminalHostPadding();
+        QueueVisibleTerminalFits();
     }
 
     private void ExpandSideBar()
@@ -1007,6 +995,8 @@ internal sealed class MainForm : Form
         SetTabsCompact(false);
         sideBarToggleButton.Glyph = SideBarToggleGlyph();
         SetActionToolTips();
+        UpdateTerminalHostPadding();
+        QueueVisibleTerminalFits();
     }
 
     private void SetTabsCompact(bool compact)
@@ -1145,6 +1135,31 @@ internal sealed class MainForm : Form
         UpdateSplitLayout();
     }
 
+    private void CancelSplitLayout()
+    {
+        var rightSessions = panes
+            .Where(pair => pair.Value == TerminalPane.Right)
+            .Select(pair => pair.Key)
+            .ToArray();
+        if (rightSessions.Length == 0)
+        {
+            return;
+        }
+
+        foreach (var session in rightSessions)
+        {
+            MoveSessionToPane(session, TerminalPane.Left);
+        }
+
+        if (activeSession is not null)
+        {
+            ActivateSession(activeSession);
+        }
+
+        UpdateSplitLayout();
+        QueueVisibleTerminalFits();
+    }
+
     private void BringPaneSessionToFront(TerminalPane pane, TerminalSession session)
     {
         if (!controls.TryGetValue(session, out var terminal))
@@ -1242,6 +1257,14 @@ internal sealed class MainForm : Form
         return pane == TerminalPane.Left ? splitHost.Panel1 : splitHost.Panel2;
     }
 
+    private void UpdateTerminalHostPadding()
+    {
+        var reservedWidth = sideBar.Width + (sideBarSplitter.Visible ? sideBarSplitter.Width : 0);
+        terminalHost.Padding = IsSideBarLeft()
+            ? new Padding(reservedWidth, 0, 0, 0)
+            : new Padding(0, 0, reservedWidth, 0);
+    }
+
     private void ApplySplitMinSizes()
     {
         if (splitHost.Width < 380)
@@ -1280,6 +1303,7 @@ internal sealed class MainForm : Form
         toolTip.SetToolTip(menuButton, "终端菜单");
         toolTip.SetToolTip(pinButton, TopMost ? "取消置顶" : "窗口置顶");
         toolTip.SetToolTip(settingsButton, "设置");
+        toolTip.SetToolTip(jumpPathButton, "跳转路径");
         toolTip.SetToolTip(compactModeButton, compactModeActive ? "恢复初始大小" : "简洁模式 720 x 480");
         toolTip.SetToolTip(floatingPinButton, TopMost ? "取消置顶" : "窗口置顶");
     }
