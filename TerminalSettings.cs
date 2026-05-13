@@ -16,6 +16,8 @@ internal sealed class TerminalSettings
 
     public string SideBarDock { get; set; } = "Right";
 
+    public string StartupTerminal { get; set; } = "cmd";
+
     public List<AiTerminalProfile> AiProfiles { get; set; } = new();
 }
 

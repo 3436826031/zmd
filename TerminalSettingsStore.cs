@@ -71,6 +71,9 @@ internal static class TerminalSettingsStore
         settings.InitialColumns = Math.Max(20, settings.InitialColumns);
         settings.InitialRows = Math.Max(5, settings.InitialRows);
         settings.SideBarDock = settings.SideBarDock.Equals("Left", StringComparison.OrdinalIgnoreCase) ? "Left" : "Right";
+        settings.StartupTerminal = string.IsNullOrWhiteSpace(settings.StartupTerminal)
+            ? defaults.StartupTerminal
+            : settings.StartupTerminal.Trim();
         settings.AiProfiles = settings.AiProfiles
             .Where(profile => !string.IsNullOrWhiteSpace(profile.Command))
             .Select(profile => new AiTerminalProfile

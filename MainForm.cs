@@ -174,7 +174,7 @@ internal sealed class MainForm : Form
             QueueVisibleTerminalFits();
         };
         Shown += (_, _) => EnsureWinRLaunchPath();
-        Shown += (_, _) => CreateSession();
+        Shown += (_, _) => CreateStartupSession();
         Shown += (_, _) => ApplySplitMinSizes();
         FormClosing += (_, _) =>
         {
@@ -226,7 +226,7 @@ internal sealed class MainForm : Form
         base.OnKeyDown(e);
     }
 
-    private TerminalSession? CreateSession(string? shellPath = null)
+    private TerminalSession? CreateSession(string? shellPath = null, string? iconKey = null, string? title = null)
     {
         var sessionSettings = shellPath is null
             ? settings
@@ -248,6 +248,16 @@ internal sealed class MainForm : Form
         };
 
         var session = new TerminalSession(sessionSettings, terminal.Columns, terminal.Rows);
+        if (!string.IsNullOrWhiteSpace(iconKey))
+        {
+            session.SetIcon(iconKey);
+        }
+
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            session.Title = title;
+        }
+
         var tab = new SessionTab(session);
         tab.Compact = sideBarCollapsed;
 
@@ -293,21 +303,62 @@ internal sealed class MainForm : Form
 
     private void CreateAiSession(AiTerminalProfile profile)
     {
-        var session = CreateSession();
+        var session = CreateSession(iconKey: profile.Icon, title: profile.Command);
         if (session is null)
         {
             return;
         }
 
-        session.SetIcon(profile.Icon);
-        session.Title = profile.Command;
         BeginInvoke(() => session.Write(profile.Command + "\r"));
     }
 
     private void CreateCmdSession()
     {
-        var session = CreateSession(Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe");
-        session?.SetIcon("cmd");
+        CreateSession(Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe", iconKey: "cmd", title: "cmd");
+    }
+
+    private void CreateStartupSession()
+    {
+        if (TryCreateTerminalFromStartupKey(settings.StartupTerminal))
+        {
+            return;
+        }
+
+        settings.StartupTerminal = "cmd";
+        CreateCmdSession();
+    }
+
+    private bool TryCreateTerminalFromStartupKey(string key)
+    {
+        var option = TerminalLaunchOptions()
+            .FirstOrDefault(item => item.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+        if (option.Key is null)
+        {
+            return false;
+        }
+
+        CreateTerminalFromOption(option);
+        return true;
+    }
+
+    private void CreateTerminalFromOption(TerminalLaunchOption option)
+    {
+        if (option.Profile is not null)
+        {
+            CreateAiSession(option.Profile);
+            return;
+        }
+
+        if (option.Key.Equals("cmd", StringComparison.OrdinalIgnoreCase))
+        {
+            CreateCmdSession();
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(option.ShellPath))
+        {
+            CreateSession(option.ShellPath, iconKey: option.Icon, title: option.Name);
+        }
     }
 
     private void ActivateSession(TerminalSession session)
@@ -464,30 +515,22 @@ internal sealed class MainForm : Form
     private void ShowNewTerminalMenu(Control owner, Point location)
     {
         var menu = CreateDarkMenu();
-        menu.Items.Add(CreateMenuItem("cmd", "cmd", (_, _) => CreateCmdSession()));
-        menu.Items.Add(new ToolStripSeparator());
-        foreach (var profile in BuiltInAiProfiles)
+        var options = TerminalLaunchOptions().ToList();
+        var customStarted = false;
+        foreach (var option in options)
         {
-            menu.Items.Add(CreateAiProfileMenuItem(profile));
-        }
-
-        if (settings.AiProfiles.Count > 0)
-        {
-            menu.Items.Add(new ToolStripSeparator());
-            foreach (var profile in settings.AiProfiles)
+            if (option.IsCustom && !customStarted)
             {
-                menu.Items.Add(CreateAiProfileMenuItem(profile));
+                menu.Items.Add(new ToolStripSeparator());
+                customStarted = true;
             }
+
+            menu.Items.Add(CreateMenuItem(option.Name, option.Icon, (_, _) => CreateTerminalFromOption(option)));
         }
 
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("新增自定义", null, (_, _) => ShowAiProfileDialog());
         ShowMenu(menu, owner, location);
-    }
-
-    private ToolStripMenuItem CreateAiProfileMenuItem(AiTerminalProfile profile)
-    {
-        return CreateMenuItem(profile.Command, profile.Icon, (_, _) => CreateAiSession(profile));
     }
 
     private ToolStripMenuItem CreateMenuItem(string text, string iconKey, EventHandler onClick)
@@ -498,6 +541,23 @@ internal sealed class MainForm : Form
         };
         item.Click += onClick;
         return item;
+    }
+
+    private IEnumerable<TerminalLaunchOption> TerminalLaunchOptions()
+    {
+        yield return new TerminalLaunchOption("cmd", "cmd", "cmd", Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe");
+        yield return new TerminalLaunchOption("powershell", "PowerShell", "powershell", "powershell.exe");
+        yield return new TerminalLaunchOption("pwsh", "Windows PowerShell", "powershell", "pwsh.exe");
+
+        foreach (var profile in BuiltInAiProfiles)
+        {
+            yield return new TerminalLaunchOption($"ai:{profile.Command}", profile.Command, profile.Icon, Profile: profile);
+        }
+
+        foreach (var profile in settings.AiProfiles)
+        {
+            yield return new TerminalLaunchOption($"custom:{profile.Command}", profile.Command, profile.Icon, Profile: profile, IsCustom: true);
+        }
     }
 
     private void ShowAiProfileDialog()
@@ -523,6 +583,7 @@ internal sealed class MainForm : Form
         var menu = CreateDarkMenu();
         menu.Items.Add("Font and size...", null, (_, _) => ShowSettingsDialog());
         menu.Items.Add(CreateSideBarDockMenu());
+        menu.Items.Add(CreateStartupTerminalMenu());
         menu.Items.Add("一键设置 Win+R 打开 zmd", null, (_, _) => AddCurrentDirectoryToUserPath());
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("检查更新", null, (_, _) => OpenReleasesPage());
@@ -549,6 +610,27 @@ internal sealed class MainForm : Form
         rightItem.Click += (_, _) => SetSideBarDock(left: false);
         item.DropDownItems.Add(leftItem);
         item.DropDownItems.Add(rightItem);
+        return item;
+    }
+
+    private ToolStripMenuItem CreateStartupTerminalMenu()
+    {
+        var item = new ToolStripMenuItem("默认启动终端");
+        foreach (var option in TerminalLaunchOptions())
+        {
+            var optionItem = new ToolStripMenuItem(option.Name)
+            {
+                Checked = string.Equals(settings.StartupTerminal, option.Key, StringComparison.OrdinalIgnoreCase),
+                Image = SessionIconCatalog.CreateBitmap(option.Icon, UiTheme.Text, 18)
+            };
+            optionItem.Click += (_, _) =>
+            {
+                settings.StartupTerminal = option.Key;
+                TerminalSettingsStore.Save(settings);
+            };
+            item.DropDownItems.Add(optionItem);
+        }
+
         return item;
     }
 
@@ -1367,5 +1449,13 @@ internal sealed class MainForm : Form
         Left,
         Right
     }
+
+    private readonly record struct TerminalLaunchOption(
+        string Key,
+        string Name,
+        string Icon,
+        string? ShellPath = null,
+        AiTerminalProfile? Profile = null,
+        bool IsCustom = false);
 }
 
